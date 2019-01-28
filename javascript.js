@@ -280,9 +280,9 @@ class Performance extends React.Component {
                 scales: {
                     xAxes: [{
                         type: 'time',
-                        /*time: {
+                        time: {
                             unit: 'day'
-                        }*/
+                        }
                     }]
                 }
             }
