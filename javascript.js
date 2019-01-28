@@ -440,14 +440,14 @@ class Portfolio extends React.Component {
     componentDidMount() {
         this._euro.checked=true;
         //$('#table'+this.props.num).scrollTableBody({rowsToDisplay:5});
-        /*$('#table'+this.props.num).DataTable({
+        $('#table'+this.props.num).DataTable({
             scrollY: 250,
             scrollCollapse: true,
             paging: false,
             searching: false,
             ordering: false,
             info: false
-        });*/
+        });
     }
     render() {
         var tdc={colSpan: 5};
