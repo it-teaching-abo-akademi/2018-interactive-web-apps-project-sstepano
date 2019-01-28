@@ -113,7 +113,7 @@ class StockPopupForm extends React.Component {
         //alert("PRE1");
         client.send();
         //alert("Posle");
-        for (var i = 0; i < 1000000000; i++) ;
+        //for (var i = 0; i < 1000000000; i++) ;
     }
 
     static save(symbol, unitvalue, quantity, dates, prices, portfolio) {
@@ -280,9 +280,9 @@ class Performance extends React.Component {
                 scales: {
                     xAxes: [{
                         type: 'time',
-                        time: {
+                        /*time: {
                             unit: 'day'
-                        }
+                        }*/
                     }]
                 }
             }
