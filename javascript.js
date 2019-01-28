@@ -111,7 +111,7 @@ class StockPopupForm extends React.Component {
         //alert("PRE1");
         client.send();
         //alert("Posle");
-        for (var i = 0; i < 1000000000; i++) ;
+        //for (var i = 0; i < 1000000000; i++) ;
     }
 
     static save(symbol, unitvalue, quantity, portfolio) {
@@ -464,7 +464,7 @@ class Portfolio extends React.Component {
         this._euro.checked=true;
         //$('#table'+this.props.num).scrollTableBody({rowsToDisplay:5});
         $('#table'+this.props.num).DataTable({
-            scrollY: 250,
+            scrollY: 255,
             scrollCollapse: true,
             paging: false,
             searching: false,
