@@ -92,13 +92,11 @@ class StockPopupForm extends React.Component {
         }
         quantity = Number(quantity);
         request = "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=" + symbol + "&outputsize=full&apikey=37AAP0WVUKV2LA7I";
-        alert(request);
         var client = new XMLHttpRequest();
         client.open("GET", request, true);
         client.onreadystatechange = function () {
             console.log("BEF");
             if (client.readyState === 4) {
-                alert("Sym1 ");
                 var obj = JSON.parse(client.responseText); // Parses the data with JSON.parse(), and the data becomes a JavaScript array.
                 if (!obj || !obj['Time Series (Daily)'] || !obj['Time Series (Daily)']['2019-01-07'] || typeof(obj['Time Series (Daily)']['2019-01-07']['4. close']) === "undefined") {
                     alert("The service is not responding for symbol " + symbol);
@@ -109,9 +107,7 @@ class StockPopupForm extends React.Component {
                 unitvalue = Number(values[0]['1. open']);
                 var valuesReverse = values.reverse();
                 var prices = valuesReverse.map(a => a["4. close"]);
-
-                StockPopupForm.saveStockHystory(symbol, unitvalue, quantity, dates, prices, portfolio);
-                alert("Sym "+symbol);
+                StockPopupForm.save(symbol, unitvalue, quantity, dates, prices, portfolio);
             }
         };
         //alert("PRE1");
@@ -145,7 +141,7 @@ class StockPopupForm extends React.Component {
                 stock["quantity"] = quantity;
                 stock["totalvalue"] = unitvalue * quantity;
                 stock["dates"] = dates;
-                stock["dataset"] = dataset;
+                stock["dataset"] = prices;
                 if (list.length >= 50) { // if list has 50 or more elements
                     alert("You can create only 50 different stocks in the same portfolio");
                     return;
@@ -163,7 +159,7 @@ class StockPopupForm extends React.Component {
                 stock["quantity"] = quantity;
                 stock["totalvalue"] = unitvalue * quantity;
                 stock["dates"] = dates;
-                stock["dataset"] = dataset;
+                stock["dataset"] = prices;
                 localStorage.setItem(key, JSON.stringify([stock]));
             }
         } else {
@@ -222,7 +218,6 @@ class Performance extends React.Component {
         var date1=document.getElementById("date1"+numOfPort);
         var date2=document.getElementById("date2"+numOfPort);
         var symbols=this.props.symbols;//["NOK","MSFT","AAPL"];
-        var portfolio = this.props.portfolio;
         var d1;//=new Date("2018-12-25");
         var d2;//=new Date("2019-01-02");
         var i;
@@ -231,7 +226,7 @@ class Performance extends React.Component {
         d2= date2.value ? date2.value : today;
         //self=this;
         this.datasets=[];
-        var key = this.props.portfolio;
+        var key = portfolio;
         if(typeof(Storage) !== "undefined") {
             if (localStorage[key]) { // if list exists in the local storage
                 this.list = JSON.parse(localStorage.getItem(key)); // retrieves the list (string) from the local storage and parses it into Javascript array
@@ -261,7 +256,7 @@ class Performance extends React.Component {
                 Performance.show(dateRange, this.datasets, numOfPort);
             }
         } else {
-            document.getElementById("history").innerHTML = "Sorry, your browser does not support web storage...";
+            document.getElementById("container").innerHTML = "Sorry, your browser does not support web storage...";
         }
     }
     static show(dateRange, datasets, numOfPort) {
@@ -285,9 +280,9 @@ class Performance extends React.Component {
                 scales: {
                     xAxes: [{
                         type: 'time',
-                        /*time: {
+                        time: {
                             unit: 'day'
-                        }*/
+                        }
                     }]
                 }
             }
