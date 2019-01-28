@@ -91,23 +91,21 @@ class StockPopupForm extends React.Component {
             return true;
         }
         quantity = Number(quantity);
-        request = "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=" + symbol + "&outputsize=full&apikey=37AAP0WVUKV2LA7I";
+        request = "https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=" + symbol + "&apikey=37AAP0WVUKV2LA7I";
         var client = new XMLHttpRequest();
         client.open("GET", request, true);
         client.onreadystatechange = function () {
             console.log("BEF");
             if (client.readyState === 4) {
-                var obj = JSON.parse(client.responseText); // Parses the data with JSON.parse(), and the data becomes a JavaScript array.
-                if (!obj || !obj['Time Series (Daily)'] || !obj['Time Series (Daily)']['2019-01-07'] || typeof(obj['Time Series (Daily)']['2019-01-07']['4. close']) === "undefined") {
-                    alert("The service is not responding for symbol " + symbol);
+                console.log("AFT");
+                var obj = JSON.parse(client.responseText); // Parses the data with JSON.parse(), and the data becomes a JavaScript object.
+                if (!obj || !obj['Global Quote'] || typeof(obj['Global Quote']['02. open']) === "undefined") {
+                    alert("There is no stock for the given symbol " + symbol);
                     return;
                 }
-                var dates = Object.keys(obj["Time Series (Daily)"]).reverse();
-                var values = Object.values(obj["Time Series (Daily)"]);
-                unitvalue = Number(values[0]['1. open']);
-                var valuesReverse = values.reverse();
-                var prices = valuesReverse.map(a => a["4. close"]);
-                StockPopupForm.save(symbol, unitvalue, quantity, dates, prices, portfolio);
+                unitvalue = Number(obj['Global Quote']['02. open']);
+                StockPopupForm.save(symbol, unitvalue, quantity, portfolio);
+                //alert("Symbol "+ symbol+ "Unit "+ unitvalue + "Quantity "+ quantity + "Num "+portfolio);
             }
         };
         //alert("PRE1");
@@ -116,7 +114,7 @@ class StockPopupForm extends React.Component {
         for (var i = 0; i < 1000000000; i++) ;
     }
 
-    static save(symbol, unitvalue, quantity, dates, prices, portfolio) {
+    static save(symbol, unitvalue, quantity, portfolio) {
         function findAllSymbols(list) {
             list.forEach(function (v) {
                 for (var k in v) {
@@ -140,8 +138,6 @@ class StockPopupForm extends React.Component {
                 stock["unitvalue"] = unitvalue;
                 stock["quantity"] = quantity;
                 stock["totalvalue"] = unitvalue * quantity;
-                stock["dates"] = dates;
-                stock["dataset"] = prices;
                 if (list.length >= 50) { // if list has 50 or more elements
                     alert("You can create only 50 different stocks in the same portfolio");
                     return;
@@ -152,15 +148,18 @@ class StockPopupForm extends React.Component {
                     list.push(stock); // adds new element to the end of the list
                 }
                 localStorage.setItem(key, JSON.stringify(list)); // converts Javascript array (list) into string and stores it into local storage
+                //for (var k = 0; k < 10000000000; k++) ;
+                StockPopupForm.sendHystoryRequest(symbol, portfolio);
+
             } else { // if list does not exist
                 stock = {};
                 stock["symbol"] = symbol; // first element of the list
                 stock["unitvalue"] = unitvalue;
                 stock["quantity"] = quantity;
                 stock["totalvalue"] = unitvalue * quantity;
-                stock["dates"] = dates;
-                stock["dataset"] = prices;
                 localStorage.setItem(key, JSON.stringify([stock]));
+                //for (var j = 0; j < 1000000000; j++) ;
+                StockPopupForm.sendHystoryRequest(symbol, portfolio);
             }
         } else {
             document.getElementById("container").innerHTML = "Sorry, your browser does not support web storage...";
@@ -218,6 +217,7 @@ class Performance extends React.Component {
         var date1=document.getElementById("date1"+numOfPort);
         var date2=document.getElementById("date2"+numOfPort);
         var symbols=this.props.symbols;//["NOK","MSFT","AAPL"];
+        var portfolio = this.props.portfolio;
         var d1;//=new Date("2018-12-25");
         var d2;//=new Date("2019-01-02");
         var i;
@@ -225,38 +225,61 @@ class Performance extends React.Component {
         d1= date1.value ? date1.value : startDate;
         d2= date2.value ? date2.value : today;
         //self=this;
-        this.datasets=[];
-        var key = portfolio;
-        if(typeof(Storage) !== "undefined") {
-            if (localStorage[key]) { // if list exists in the local storage
-                this.list = JSON.parse(localStorage.getItem(key)); // retrieves the list (string) from the local storage and parses it into Javascript array
-                for(i=0; i<this.list.length; i++) {
-                    symbol = this.list[i]["symbol"];
-                    var dates = this.list[i]["dates"];
-                    var dateRange = dates.slice();
-                    for (var k = dateRange.length - 1; k >= 0; k--) {
-                        if (dateRange[k] > d2 || dateRange[k] < d1) {
-                            dateRange.splice(k, 1);
+        self.datasets=[];
+        for(i=0; i<symbols.length; i++) {
+            symbol = symbols[i];
+            request = "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=" + symbol + "&outputsize=full&apikey=37AAP0WVUKV2LA7I";
+            //alert("req " + request);
+            var client = new XMLHttpRequest();
+            client.open("GET", request, true);
+            client.onreadystatechange = (function(client, symbol, i)
+            {
+                return function () {
+                    if (client.readyState === 4) {
+                        var obj = JSON.parse(client.responseText); // Parses the data with JSON.parse(), and the data becomes a JavaScript array.
+                        if (!obj || !obj['Time Series (Daily)'] || !obj['Time Series (Daily)']['2019-01-07'] || typeof(obj['Time Series (Daily)']['2019-01-07']['4. close']) === "undefined") {
+                            alert("The service is not responding for symbol " + symbol);
+                            return;
+                        }
+                        //alert("111 "+obj['Time Series (Daily)']);
+                        var dates = Object.keys(obj["Time Series (Daily)"]).reverse();
+                        //var dates = keys.map(a => new Date(a));
+                        var dateRange = dates.slice();
+                        for (var k = dateRange.length - 1; k >= 0; k--) {
+                            if (dateRange[k] > d2 || dateRange[k] < d1) {
+                                dateRange.splice(k, 1);
+                            }
+                        }
+                        var first = dates.indexOf(dateRange[0]);
+                        var last = dates.indexOf(dateRange[dateRange.length - 1]);
+                        var values = Object.values(obj["Time Series (Daily)"]).reverse();
+                        var prices = values.map(a => a["4. close"]);
+                        var priceRange = prices.slice(first, last + 1);
+                        //alert("Symbol "+ symbol+ "Unit "+ unitvalue + "Quantity "+ quantity + "Num "+portfolio);
+                        var rgb = "rgb(" + parseInt(255/symbols.length) * i + ", " + parseInt(255/symbols.length) * (symbols.length - i) + ", " + parseInt(255/symbols.length) * i + ")";
+                        //alert("RGB "+rgb);
+                        var dataset = {
+                            label: symbol,
+                            backgroundColor: rgb,
+                            borderColor: rgb,
+                            data: priceRange,
+                            fill: false
+                        };
+                        self.datasets.push(dataset);
+                        if (self.datasets.length === symbols.length) {
+                            //alert("DATASETS "+self.datasets.length);
+                            /*if (0 === self.datasets.length) {
+                                alert("The service is not responding");
+                                return;
+                            }*/
+                            Performance.show(dateRange, self.datasets, numOfPort);
                         }
                     }
-                    var first = dates.indexOf(dateRange[0]);
-                    var last = dates.indexOf(dateRange[dateRange.length - 1]);
-                    var prices = this.list[i]["dataset"];
-                    var priceRange = prices.slice(first, last + 1);
-                    var rgb = "rgb(" + parseInt(255/this.list.length) * i + ", " + parseInt(255/this.list.length) * (this.list.length - i) + ", " + parseInt(255/this.list.length) * i + ")";
-                    var dataset = {
-                        label: symbol,
-                        backgroundColor: rgb,
-                        borderColor: rgb,
-                        data: priceRange,
-                        fill: false
-                    };
-                    this.datasets.push(dataset);
-                }
-                Performance.show(dateRange, this.datasets, numOfPort);
-            }
-        } else {
-            document.getElementById("container").innerHTML = "Sorry, your browser does not support web storage...";
+                };
+            }(client, symbol, i));
+            //alert("PRE ");
+            client.send();
+            //for(var j=0; j<1000;j++);
         }
     }
     static show(dateRange, datasets, numOfPort) {
@@ -280,9 +303,9 @@ class Performance extends React.Component {
                 scales: {
                     xAxes: [{
                         type: 'time',
-                        time: {
+                        /*time: {
                             unit: 'day'
-                        }
+                        }*/
                     }]
                 }
             }
@@ -309,39 +332,39 @@ class Performance extends React.Component {
         startDate.setMonth(startDate.getMonth()-1);
         startDate = Performance.formatDate(startDate);
         return (
-        <div>
-        <button type="button" className="open-button" data-toggle="modal" data-target={"#myLargeModal"+num} onClick={this.perf}>Perf data</button>
+            <div>
+                <button type="button" className="open-button" data-toggle="modal" data-target={"#myLargeModal"+num} onClick={this.perf}>Perf data</button>
 
-        <div className="modal fade bd-example-modal-lg" id={"myLargeModal"+num} tabIndex="-1" role="dialog" aria-labelledby={"myLargeModalLabel"+num} aria-hidden="true">
-            <div className="modal-dialog modal-dialog-centered modal-lg">
-                <div className="modal-content">
-                    <div className="modal-header">
-                        <h5 className="modal-title" id={"myLargeModalLabel"+num}></h5>
-                        <button type="button" className="btn btn-secondary" data-dismiss="modal">Close</button>
-                    </div>
-                    <div className="modal-body">
-                        <canvas id={"myChart"+num}></canvas>
-                    </div>
-                    <div className="container">
-                        <div className="row justify-content-center">
-                            <div className="col-9 offset-3 col-md-5 offset-md-0 form-check form-check-inline py-1 py-md-0">
-                                <label className="form-check-label" htmlFor={"date1"+num}>Starting time</label>&nbsp;
-                                <input className="form-check-input" type="date" id={"date1"+num} defaultValue={startDate} min="1998-01-02" max={today}/>
+                <div className="modal fade bd-example-modal-lg" id={"myLargeModal"+num} tabIndex="-1" role="dialog" aria-labelledby={"myLargeModalLabel"+num} aria-hidden="true">
+                    <div className="modal-dialog modal-dialog-centered modal-lg">
+                        <div className="modal-content">
+                            <div className="modal-header">
+                                <h5 className="modal-title" id={"myLargeModalLabel"+num}></h5>
+                                <button type="button" className="btn btn-secondary" data-dismiss="modal">Close</button>
                             </div>
-                            <div className="col-9 offset-3 col-md-5 offset-md-0 form-check form-check-inline py-1 py-md-0">
-                                <label className="form-check-label" htmlFor={"date2"+num}>Ending time&nbsp;</label>&nbsp;
-                                <input className="form-check-input" type="date" id={"date2"+num} defaultValue={today} min="1998-01-02" max={today}/>
+                            <div className="modal-body">
+                                <canvas id={"myChart"+num}></canvas>
                             </div>
-                            <div className="py-1 py-md-0">
-                                <button type="button" className="btn btn-primary" onClick={this.perf}>Show</button>
+                            <div className="container">
+                                <div className="row justify-content-center">
+                                    <div className="col-9 offset-3 col-md-5 offset-md-0 form-check form-check-inline py-1 py-md-0">
+                                        <label className="form-check-label" htmlFor={"date1"+num}>Starting time</label>&nbsp;
+                                        <input className="form-check-input" type="date" id={"date1"+num} defaultValue={startDate} min="1998-01-02" max={today}/>
+                                    </div>
+                                    <div className="col-9 offset-3 col-md-5 offset-md-0 form-check form-check-inline py-1 py-md-0">
+                                        <label className="form-check-label" htmlFor={"date2"+num}>Ending time&nbsp;</label>&nbsp;
+                                        <input className="form-check-input" type="date" id={"date2"+num} defaultValue={today} min="1998-01-02" max={today}/>
+                                    </div>
+                                    <div className="py-1 py-md-0">
+                                        <button type="button" className="btn btn-primary" onClick={this.perf}>Show</button>
+                                    </div>
+                                </div>
+
                             </div>
                         </div>
-
                     </div>
                 </div>
             </div>
-        </div>
-        </div>
         )
     }
 }
@@ -509,7 +532,7 @@ class Portfolio extends React.Component {
                             </tr>
                             </thead>
                             <tbody ref={function(e7){self["_table"] = e7;}} >
-                                    {stocks}
+                            {stocks}
                             </tbody>
                         </table>
                     </div>
@@ -587,7 +610,7 @@ class SPMS extends React.Component {
         var newlist = [];
         for(var i=0; i<this.list.length; i++) {
             if (i !== id) {
-                    newlist.push(this.list[i]);
+                newlist.push(this.list[i]);
             }
         }
         this.list = newlist.slice();
