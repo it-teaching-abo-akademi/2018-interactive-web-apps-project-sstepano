@@ -91,31 +91,36 @@ class StockPopupForm extends React.Component {
             return true;
         }
         quantity = Number(quantity);
-        request = "https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=" + symbol + "&apikey=37AAP0WVUKV2LA7I";
+        request = "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=" + symbol + "&outputsize=full&apikey=37AAP0WVUKV2LA7I";
+        alert(request);
         var client = new XMLHttpRequest();
-        //client.open("GET", request, true);
+        client.open("GET", request, true);
         client.onreadystatechange = function () {
             console.log("BEF");
             if (client.readyState === 4) {
-                console.log("AFT");
-                var obj = JSON.parse(client.responseText); // Parses the data with JSON.parse(), and the data becomes a JavaScript object.
-                if (!obj || !obj['Global Quote'] || typeof(obj['Global Quote']['02. open']) === "undefined") {
-                    alert("There is no stock for the given symbol " + symbol);
+                alert("Sym1 ");
+                var obj = JSON.parse(client.responseText); // Parses the data with JSON.parse(), and the data becomes a JavaScript array.
+                if (!obj || !obj['Time Series (Daily)'] || !obj['Time Series (Daily)']['2019-01-07'] || typeof(obj['Time Series (Daily)']['2019-01-07']['4. close']) === "undefined") {
+                    alert("The service is not responding for symbol " + symbol);
                     return;
                 }
-                unitvalue = Number(obj['Global Quote']['02. open']);
-                StockPopupForm.save(symbol, unitvalue, quantity, portfolio);
-                //alert("Symbol "+ symbol+ "Unit "+ unitvalue + "Quantity "+ quantity + "Num "+portfolio);
+                var dates = Object.keys(obj["Time Series (Daily)"]).reverse();
+                var values = Object.values(obj["Time Series (Daily)"]);
+                unitvalue = Number(values[0]['1. open']);
+                var valuesReverse = values.reverse();
+                var prices = valuesReverse.map(a => a["4. close"]);
+
+                StockPopupForm.saveStockHystory(symbol, unitvalue, quantity, dates, prices, portfolio);
+                alert("Sym "+symbol);
             }
         };
         //alert("PRE1");
-        client.open("GET", request, true);
         client.send();
         //alert("Posle");
-        //for (var i = 0; i < 1000000000; i++) ;
+        for (var i = 0; i < 1000000000; i++) ;
     }
 
-    static save(symbol, unitvalue, quantity, portfolio) {
+    static save(symbol, unitvalue, quantity, dates, prices, portfolio) {
         function findAllSymbols(list) {
             list.forEach(function (v) {
                 for (var k in v) {
@@ -139,6 +144,8 @@ class StockPopupForm extends React.Component {
                 stock["unitvalue"] = unitvalue;
                 stock["quantity"] = quantity;
                 stock["totalvalue"] = unitvalue * quantity;
+                stock["dates"] = dates;
+                stock["dataset"] = dataset;
                 if (list.length >= 50) { // if list has 50 or more elements
                     alert("You can create only 50 different stocks in the same portfolio");
                     return;
@@ -149,18 +156,15 @@ class StockPopupForm extends React.Component {
                     list.push(stock); // adds new element to the end of the list
                 }
                 localStorage.setItem(key, JSON.stringify(list)); // converts Javascript array (list) into string and stores it into local storage
-                //for (var k = 0; k < 10000000000; k++) ;
-                StockPopupForm.sendHystoryRequest(symbol, portfolio);
-
             } else { // if list does not exist
                 stock = {};
                 stock["symbol"] = symbol; // first element of the list
                 stock["unitvalue"] = unitvalue;
                 stock["quantity"] = quantity;
                 stock["totalvalue"] = unitvalue * quantity;
+                stock["dates"] = dates;
+                stock["dataset"] = dataset;
                 localStorage.setItem(key, JSON.stringify([stock]));
-                //for (var j = 0; j < 1000000000; j++) ;
-                StockPopupForm.sendHystoryRequest(symbol, portfolio);
             }
         } else {
             document.getElementById("container").innerHTML = "Sorry, your browser does not support web storage...";
@@ -222,65 +226,42 @@ class Performance extends React.Component {
         var d1;//=new Date("2018-12-25");
         var d2;//=new Date("2019-01-02");
         var i;
-        document.getElementById("myLargeModalLabel"+numOfPort).innerHTML = portfolio;
+        document.getElementById("myLargeModalLabel"+numOfPort).innerHTML = portfolio+ " performance";
         d1= date1.value ? date1.value : startDate;
         d2= date2.value ? date2.value : today;
         //self=this;
-        self.datasets=[];
-        for(i=0; i<symbols.length; i++) {
-            symbol = symbols[i];
-            request = "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=" + symbol + "&outputsize=full&apikey=37AAP0WVUKV2LA7I";
-            //alert("req " + request);
-            var client = new XMLHttpRequest();
-            client.open("GET", request, true);
-            client.onreadystatechange = (function(client, symbol, i)
-            {
-                return function () {
-                    if (client.readyState === 4) {
-                        var obj = JSON.parse(client.responseText); // Parses the data with JSON.parse(), and the data becomes a JavaScript array.
-                        if (!obj || !obj['Time Series (Daily)'] || !obj['Time Series (Daily)']['2019-01-07'] || typeof(obj['Time Series (Daily)']['2019-01-07']['4. close']) === "undefined") {
-                            alert("The service is not responding for symbol " + symbol);
-                            return;
-                        }
-                        //alert("111 "+obj['Time Series (Daily)']);
-                        var dates = Object.keys(obj["Time Series (Daily)"]).reverse();
-                        //var dates = keys.map(a => new Date(a));
-                        var dateRange = dates.slice();
-                        for (var k = dateRange.length - 1; k >= 0; k--) {
-                            if (dateRange[k] > d2 || dateRange[k] < d1) {
-                                dateRange.splice(k, 1);
-                            }
-                        }
-                        var first = dates.indexOf(dateRange[0]);
-                        var last = dates.indexOf(dateRange[dateRange.length - 1]);
-                        var values = Object.values(obj["Time Series (Daily)"]).reverse();
-                        var prices = values.map(a => a["4. close"]);
-                        var priceRange = prices.slice(first, last + 1);
-                        //alert("Symbol "+ symbol+ "Unit "+ unitvalue + "Quantity "+ quantity + "Num "+portfolio);
-                        var rgb = "rgb(" + parseInt(255/symbols.length) * i + ", " + parseInt(255/symbols.length) * (symbols.length - i) + ", " + parseInt(255/symbols.length) * i + ")";
-                        //alert("RGB "+rgb);
-                        var dataset = {
-                            label: symbol,
-                            backgroundColor: rgb,
-                            borderColor: rgb,
-                            data: priceRange,
-                            fill: false
-                        };
-                        self.datasets.push(dataset);
-                        if (self.datasets.length === symbols.length) {
-                            //alert("DATASETS "+self.datasets.length);
-                            /*if (0 === self.datasets.length) {
-                                alert("The service is not responding");
-                                return;
-                            }*/
-                            Performance.show(dateRange, self.datasets, numOfPort);
+        this.datasets=[];
+        var key = this.props.portfolio;
+        if(typeof(Storage) !== "undefined") {
+            if (localStorage[key]) { // if list exists in the local storage
+                this.list = JSON.parse(localStorage.getItem(key)); // retrieves the list (string) from the local storage and parses it into Javascript array
+                for(i=0; i<this.list.length; i++) {
+                    symbol = this.list[i]["symbol"];
+                    var dates = this.list[i]["dates"];
+                    var dateRange = dates.slice();
+                    for (var k = dateRange.length - 1; k >= 0; k--) {
+                        if (dateRange[k] > d2 || dateRange[k] < d1) {
+                            dateRange.splice(k, 1);
                         }
                     }
-                };
-            }(client, symbol, i));
-            //alert("PRE ");
-            client.send();
-            //for(var j=0; j<1000;j++);
+                    var first = dates.indexOf(dateRange[0]);
+                    var last = dates.indexOf(dateRange[dateRange.length - 1]);
+                    var prices = this.list[i]["dataset"];
+                    var priceRange = prices.slice(first, last + 1);
+                    var rgb = "rgb(" + parseInt(255/this.list.length) * i + ", " + parseInt(255/this.list.length) * (this.list.length - i) + ", " + parseInt(255/this.list.length) * i + ")";
+                    var dataset = {
+                        label: symbol,
+                        backgroundColor: rgb,
+                        borderColor: rgb,
+                        data: priceRange,
+                        fill: false
+                    };
+                    this.datasets.push(dataset);
+                }
+                Performance.show(dateRange, this.datasets, numOfPort);
+            }
+        } else {
+            document.getElementById("history").innerHTML = "Sorry, your browser does not support web storage...";
         }
     }
     static show(dateRange, datasets, numOfPort) {
@@ -463,12 +444,28 @@ class Portfolio extends React.Component {
     }
     componentDidMount() {
         this._euro.checked=true;
+        //$('#table'+this.props.num).scrollTableBody({rowsToDisplay:5});
+        /*$('#table'+this.props.num).DataTable({
+            scrollY: 250,
+            scrollCollapse: true,
+            paging: false,
+            searching: false,
+            ordering: false,
+            info: false
+        });*/
     }
     render() {
+        var tdc={colSpan: 5};
         var self=this;
         var stocks = [];
         var totalvalue=0;
         var symbols = [];
+        var currency = "&euro;";
+        if(this.state.rate === 1) {
+            currency = '\u20AC';
+        } else {
+            currency = '\u0024';
+        }
         for (var ii = 0; ii < this.state.list.length; ii++) {
             var symbol = this.state.list[ii]["symbol"];
             symbols.push(symbol);
@@ -478,9 +475,9 @@ class Portfolio extends React.Component {
             var stock = (
                 <tr key={ii}>
                     <td>{symbol}</td>
-                    <td>{unitvalue}</td>
+                    <td>{unitvalue+currency}</td>
                     <td>{quantity}</td>
-                    <td>{totalvalueStock}</td>
+                    <td>{totalvalueStock+currency}</td>
                     <td><input id={this.props.num.toString()+ii} type="checkbox" onChange={this.checked}/></td>
                 </tr>
             );
@@ -489,7 +486,7 @@ class Portfolio extends React.Component {
         }
         totalvalue = parseFloat(totalvalue.toString()).toFixed(2);
         return (
-            <div className="col-4 portfolio">
+            <div className="col-sm-6 col-md-4 col-0-gutter portfolio">
                 <div className="row">
                     <div className="col-4">
                         <p>{this.props.portfolio}</p>
@@ -506,8 +503,8 @@ class Portfolio extends React.Component {
                 </div>
                 <div className="row">
                     <div className="col-12">
-                        <table className="portfoliotable">
-                            <tbody ref={function(e7){self["_table"] = e7;}} >
+                        <table className="portfoliotable" id={"table"+this.props.num}>
+                            <thead>
                             <tr>
                                 <th onClick={() => this.sortBy("symbol")}>Name</th>
                                 <th onClick={() => this.sortBy("unitvalue")}>Unit value</th>
@@ -515,14 +512,16 @@ class Portfolio extends React.Component {
                                 <th onClick={() => this.sortBy("totalvalue")}>Total value</th>
                                 <th>Select</th>
                             </tr>
-                            {stocks}
+                            </thead>
+                            <tbody ref={function(e7){self["_table"] = e7;}} >
+                                    {stocks}
                             </tbody>
                         </table>
                     </div>
                 </div>
                 <div className="row">
                     <div className="col-12">
-                        <p>Total value of {this.props.portfolio}: {totalvalue}</p>
+                        <p>Total value of {this.props.portfolio}: {totalvalue+currency}</p>
                     </div>
                 </div>
                 <div className="row rel">
