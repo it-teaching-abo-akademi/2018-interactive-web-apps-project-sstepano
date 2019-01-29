@@ -148,9 +148,6 @@ class StockPopupForm extends React.Component {
                     list.push(stock); // adds new element to the end of the list
                 }
                 localStorage.setItem(key, JSON.stringify(list)); // converts Javascript array (list) into string and stores it into local storage
-                //for (var k = 0; k < 10000000000; k++) ;
-                StockPopupForm.sendHystoryRequest(symbol, portfolio);
-
             } else { // if list does not exist
                 stock = {};
                 stock["symbol"] = symbol; // first element of the list
@@ -158,8 +155,6 @@ class StockPopupForm extends React.Component {
                 stock["quantity"] = quantity;
                 stock["totalvalue"] = unitvalue * quantity;
                 localStorage.setItem(key, JSON.stringify([stock]));
-                //for (var j = 0; j < 1000000000; j++) ;
-                StockPopupForm.sendHystoryRequest(symbol, portfolio);
             }
         } else {
             document.getElementById("container").innerHTML = "Sorry, your browser does not support web storage...";
@@ -465,6 +460,7 @@ class Portfolio extends React.Component {
         //$('#table'+this.props.num).scrollTableBody({rowsToDisplay:5});
         $('#table'+this.props.num).DataTable({
             scrollY: 255,
+            scrollX: 2000,
             scrollCollapse: true,
             paging: false,
             searching: false,
