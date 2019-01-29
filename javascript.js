@@ -72,7 +72,7 @@ class StockPopupForm extends React.Component {
     }
 
     //self = this;
-    add(evt) {
+    add1(evt) {
         var symbol, quantity, unitvalue, request, numOfPort;
         var portfolio = this.props.portfolio;
         var num = this.props.num;
@@ -114,30 +114,34 @@ class StockPopupForm extends React.Component {
         //for (var i = 0; i < 1000000000; i++) ;
     }
 
-    static save(symbol, unitvalue, quantity, portfolio) {
-        function findAllSymbols(list) {
-            list.forEach(function (v) {
-                for (var k in v) {
-                    if (v.hasOwnProperty(k) && k !== "symbol") {
-                        delete v[k];
-                        return v[k];
-                    }
-                }
-            });
-            return list;
+    add(evt) {
+        var symbol, quantity, unitvalue, request, numOfPort;
+        var portfolio = this.props.portfolio;
+        var num = this.props.num;
+        symbol = document.getElementById("symbol_id"+num).value;
+        if (symbol.length !== 3 && symbol.length !== 4) {
+            document.getElementById("symbol_id"+num).focus();
+            alert("The symbol must have 3 or 4 characters");
+            evt.preventDefault();
+            return true;
         }
-
+        quantity = document.getElementById("quantity_id"+num).value;
+        if (!(/^\d+$/.test(quantity))) {
+            document.getElementById("quantity_id"+num).focus();
+            alert("The quantity must have only digits");
+            evt.preventDefault();
+            return true;
+        }
+        quantity = Number(quantity);
+        request = "https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=" + symbol + "&apikey=37AAP0WVUKV2LA7I";
+        var client = new XMLHttpRequest();
+        client.open("GET", request, true);
         var list, stock, checklist;
         var key = portfolio;
         if (typeof(Storage) !== "undefined") {
             if (localStorage[key]) { // if list already exists
                 list = JSON.parse(localStorage.getItem(key)); // retrieves the list (string) from the local storage and parses it into Javascript array
                 checklist = list.map(a => a.symbol);
-                stock = {};
-                stock["symbol"] = symbol; // creates new element of the list
-                stock["unitvalue"] = unitvalue;
-                stock["quantity"] = quantity;
-                stock["totalvalue"] = unitvalue * quantity;
                 if (list.length >= 50) { // if list has 50 or more elements
                     alert("You can create only 50 different stocks in the same portfolio");
                     return;
@@ -145,17 +149,50 @@ class StockPopupForm extends React.Component {
                     alert("This stock already exists");
                     return;
                 } else {
-                    list.push(stock); // adds new element to the end of the list
+                    client.onreadystatechange = function () {
+                        console.log("BEF");
+                        if (client.readyState === 4) {
+                            console.log("AFT");
+                            var obj = JSON.parse(client.responseText); // Parses the data with JSON.parse(), and the data becomes a JavaScript object.
+                            if (!obj || !obj['Global Quote'] || typeof(obj['Global Quote']['02. open']) === "undefined") {
+                                alert("There is no stock for the given symbol " + symbol);
+                                return;
+                            }
+                            unitvalue = Number(obj['Global Quote']['02. open']);
+                            stock = {};
+                            stock["symbol"] = symbol; // creates new element of the list
+                            stock["unitvalue"] = unitvalue;
+                            stock["quantity"] = quantity;
+                            stock["totalvalue"] = unitvalue * quantity;
+                            list.push(stock); // adds new element to the end of the list
+                            localStorage.setItem(key, JSON.stringify(list)); // converts Javascript array (list) into string and stores it into local storage
+                            //alert("Symbol "+ symbol+ "Unit "+ unitvalue + "Quantity "+ quantity + "Num "+portfolio);
+                        }
+                    };
                 }
-                localStorage.setItem(key, JSON.stringify(list)); // converts Javascript array (list) into string and stores it into local storage
             } else { // if list does not exist
-                stock = {};
-                stock["symbol"] = symbol; // first element of the list
-                stock["unitvalue"] = unitvalue;
-                stock["quantity"] = quantity;
-                stock["totalvalue"] = unitvalue * quantity;
-                localStorage.setItem(key, JSON.stringify([stock]));
+                client.onreadystatechange = function () {
+                    console.log("BEF");
+                    if (client.readyState === 4) {
+                        console.log("AFT");
+                        var obj = JSON.parse(client.responseText); // Parses the data with JSON.parse(), and the data becomes a JavaScript object.
+                        if (!obj || !obj['Global Quote'] || typeof(obj['Global Quote']['02. open']) === "undefined") {
+                            alert("There is no stock for the given symbol " + symbol);
+                            return;
+                        }
+                        unitvalue = Number(obj['Global Quote']['02. open']);
+                        stock = {};
+                        stock["symbol"] = symbol; // first element of the list
+                        stock["unitvalue"] = unitvalue;
+                        stock["quantity"] = quantity;
+                        stock["totalvalue"] = unitvalue * quantity;
+                        localStorage.setItem(key, JSON.stringify([stock]));
+                        //alert("Symbol "+ symbol+ "Unit "+ unitvalue + "Quantity "+ quantity + "Num "+portfolio);
+                    }
+                };
             }
+            client.send();
+            //for (var i = 0; i < 1000000000; i++) ;
         } else {
             document.getElementById("container").innerHTML = "Sorry, your browser does not support web storage...";
         }
