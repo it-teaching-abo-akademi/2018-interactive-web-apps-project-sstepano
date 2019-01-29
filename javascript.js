@@ -192,7 +192,7 @@ class StockPopupForm extends React.Component {
                 };
             }
             client.send();
-            //for (var i = 0; i < 1000000000; i++) ;
+            for (var i = 0; i < 1000000000; i++) ;
         } else {
             document.getElementById("container").innerHTML = "Sorry, your browser does not support web storage...";
         }
