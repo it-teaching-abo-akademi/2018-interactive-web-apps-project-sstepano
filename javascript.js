@@ -5,7 +5,8 @@ class PortfolioPopupForm extends React.Component {
     }
 
     add(evt) {
-        var list, portfolio;
+        var list, portfolio, portField;
+        portField = document.getElementById("name_id");
         portfolio = document.getElementById("name_id").value;
         if (portfolio.length === 0) {
             alert("The portfolio name is mandatory");
@@ -19,7 +20,10 @@ class PortfolioPopupForm extends React.Component {
                     alert("You can create only 10 portfolios");
                     return;
                 } else if (list.includes(portfolio)) { // already includes the same portfolio
+                    portField.value = "";
+                    portField.focus();
                     alert("This portfolio already exists");
+                    evt.preventDefault();
                     return;
                 } else {
                     list.push(portfolio); // adds new element to the end of the list
@@ -37,9 +41,13 @@ class PortfolioPopupForm extends React.Component {
 
         var self = this;
         //this.show();
+        var buttonStyle = {};
+        if (this.props.disabled) {
+            buttonStyle = {cursor: 'none', opacity: 0.3};
+        }
         return (
             <div className={this.props.class}>
-                <button className={this.props.open_button_class} data-toggle="modal" data-target="#exampleModalCenter">Add new portfolio</button>
+                <button style={buttonStyle} className="open-button port" disabled={this.props.disabled} data-toggle="modal" data-target="#exampleModalCenter">Add new portfolio</button>
                 <div className="modal fade" id="exampleModalCenter" tabIndex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
                     <div className="modal-dialog modal-dialog-centered" role="document">
                         <div className="modal-content">
@@ -71,60 +79,19 @@ class StockPopupForm extends React.Component {
         this.add = this.add.bind(this);
     }
 
-    //self = this;
-    add1(evt) {
-        var symbol, quantity, unitvalue, request, numOfPort;
-        var portfolio = this.props.portfolio;
-        var num = this.props.num;
-        symbol = document.getElementById("symbol_id"+num).value;
-        if (symbol.length !== 3 && symbol.length !== 4) {
-            document.getElementById("symbol_id"+num).focus();
-            alert("The symbol must have 3 or 4 characters");
-            evt.preventDefault();
-            return true;
-        }
-        quantity = document.getElementById("quantity_id"+num).value;
-        if (!(/^\d+$/.test(quantity))) {
-            document.getElementById("quantity_id"+num).focus();
-            alert("The quantity must have only digits");
-            evt.preventDefault();
-            return true;
-        }
-        quantity = Number(quantity);
-        request = "https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=" + symbol + "&apikey=37AAP0WVUKV2LA7I";
-        var client = new XMLHttpRequest();
-        client.open("GET", request, true);
-        client.onreadystatechange = function () {
-            console.log("BEF");
-            if (client.readyState === 4) {
-                console.log("AFT");
-                var obj = JSON.parse(client.responseText); // Parses the data with JSON.parse(), and the data becomes a JavaScript object.
-                if (!obj || !obj['Global Quote'] || typeof(obj['Global Quote']['02. open']) === "undefined") {
-                    alert("There is no stock for the given symbol " + symbol);
-                    return;
-                }
-                unitvalue = Number(obj['Global Quote']['02. open']);
-                StockPopupForm.save(symbol, unitvalue, quantity, portfolio);
-                //alert("Symbol "+ symbol+ "Unit "+ unitvalue + "Quantity "+ quantity + "Num "+portfolio);
-            }
-        };
-        //alert("PRE1");
-        client.send();
-        //alert("Posle");
-        //for (var i = 0; i < 1000000000; i++) ;
-    }
-
     add(evt) {
         var symbol, quantity, unitvalue, request, numOfPort;
         var portfolio = this.props.portfolio;
         var num = this.props.num;
-        symbol = document.getElementById("symbol_id"+num).value;
-        if (symbol.length !== 3 && symbol.length !== 4) {
+        var symbolField = document.getElementById("symbol_id"+num);
+        symbol = document.getElementById("symbol_id"+num).value.toUpperCase();
+        if ( !(/^[a-zA-Z]+$/.test(symbol)) || symbol.length > 4) {
             document.getElementById("symbol_id"+num).focus();
-            alert("The symbol must have 3 or 4 characters");
+            alert("The symbol must have 1, 2, 3 or 4 letters and only letters");
             evt.preventDefault();
             return true;
         }
+        var quantityField = document.getElementById("quantity_id"+num);
         quantity = document.getElementById("quantity_id"+num).value;
         if (!(/^\d+$/.test(quantity))) {
             document.getElementById("quantity_id"+num).focus();
@@ -146,13 +113,15 @@ class StockPopupForm extends React.Component {
                     alert("You can create only 50 different stocks in the same portfolio");
                     return;
                 } else if (checklist.includes(symbol)) { // already includes the same stock
+                    symbolField.value = "";
+                    quantityField.value = "";
+                    symbolField.focus();
                     alert("This stock already exists");
+                    evt.preventDefault();
                     return;
                 } else {
                     client.onreadystatechange = function () {
-                        console.log("BEF");
                         if (client.readyState === 4) {
-                            console.log("AFT");
                             var obj = JSON.parse(client.responseText); // Parses the data with JSON.parse(), and the data becomes a JavaScript object.
                             if (!obj || !obj['Global Quote'] || typeof(obj['Global Quote']['02. open']) === "undefined") {
                                 alert("There is no stock for the given symbol " + symbol);
@@ -166,15 +135,12 @@ class StockPopupForm extends React.Component {
                             stock["totalvalue"] = unitvalue * quantity;
                             list.push(stock); // adds new element to the end of the list
                             localStorage.setItem(key, JSON.stringify(list)); // converts Javascript array (list) into string and stores it into local storage
-                            //alert("Symbol "+ symbol+ "Unit "+ unitvalue + "Quantity "+ quantity + "Num "+portfolio);
                         }
                     };
                 }
             } else { // if list does not exist
                 client.onreadystatechange = function () {
-                    console.log("BEF");
                     if (client.readyState === 4) {
-                        console.log("AFT");
                         var obj = JSON.parse(client.responseText); // Parses the data with JSON.parse(), and the data becomes a JavaScript object.
                         if (!obj || !obj['Global Quote'] || typeof(obj['Global Quote']['02. open']) === "undefined") {
                             alert("There is no stock for the given symbol " + symbol);
@@ -187,7 +153,6 @@ class StockPopupForm extends React.Component {
                         stock["quantity"] = quantity;
                         stock["totalvalue"] = unitvalue * quantity;
                         localStorage.setItem(key, JSON.stringify([stock]));
-                        //alert("Symbol "+ symbol+ "Unit "+ unitvalue + "Quantity "+ quantity + "Num "+portfolio);
                     }
                 };
             }
@@ -200,13 +165,16 @@ class StockPopupForm extends React.Component {
 
 
     render() {
-
         var self = this;
         //this.show();
         var num = this.props.num;
+        var buttonStyle = {};
+        if (this.props.disabled) {
+            buttonStyle = {cursor: 'none', opacity: 0.3};
+        }
         return (
             <div className={this.props.class}>
-                <button className={this.props.open_button_class} data-toggle="modal" data-target={"#exampleModalCenterStock"+num}>Add stock</button>
+                <button style={buttonStyle} className="open-button" disabled={this.props.disabled} data-toggle="modal" data-target={"#exampleModalCenterStock"+num}>Add stock</button>
                 <div className="modal fade" id={"exampleModalCenterStock"+num} tabIndex="-1" role="dialog" aria-labelledby={"exampleModalCenterTitleStock"+num} aria-hidden="true">
                     <div className="modal-dialog modal-dialog-centered" role="document">
                         <div className="modal-content">
@@ -241,7 +209,7 @@ class Performance extends React.Component {
     }
     datasets;
     list = [];
-    perf(){
+    perf(evt){
         var  symbol, quantity, unitvalue, request, numOfPort;
         numOfPort = this.props.num;
         var portfolio = this.props.portfolio;
@@ -256,12 +224,16 @@ class Performance extends React.Component {
         document.getElementById("myLargeModalLabel"+numOfPort).innerHTML = portfolio+ " performance";
         d1= date1.value ? date1.value : startDate;
         d2= date2.value ? date2.value : today;
+        if (d1 > d2) {
+            alert("Starting date must be less than or equal to Ending date");
+            evt.preventDefault();
+            return;
+        }
         //self=this;
         self.datasets=[];
         for(i=0; i<symbols.length; i++) {
             symbol = symbols[i];
             request = "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=" + symbol + "&outputsize=full&apikey=37AAP0WVUKV2LA7I";
-            //alert("req " + request);
             var client = new XMLHttpRequest();
             client.open("GET", request, true);
             client.onreadystatechange = (function(client, symbol, i)
@@ -269,11 +241,10 @@ class Performance extends React.Component {
                 return function () {
                     if (client.readyState === 4) {
                         var obj = JSON.parse(client.responseText); // Parses the data with JSON.parse(), and the data becomes a JavaScript array.
-                        if (!obj || !obj['Time Series (Daily)'] || !obj['Time Series (Daily)']['2019-01-07'] || typeof(obj['Time Series (Daily)']['2019-01-07']['4. close']) === "undefined") {
-                            alert("The service is not responding for symbol " + symbol);
+                        if (!obj || !obj['Time Series (Daily)'] || obj['Time Series (Daily)'] === "undefined") {
+                            alert("There is no history for symbol " + symbol);
                             return;
                         }
-                        //alert("111 "+obj['Time Series (Daily)']);
                         var dates = Object.keys(obj["Time Series (Daily)"]).reverse();
                         //var dates = keys.map(a => new Date(a));
                         var dateRange = dates.slice();
@@ -287,9 +258,7 @@ class Performance extends React.Component {
                         var values = Object.values(obj["Time Series (Daily)"]).reverse();
                         var prices = values.map(a => a["4. close"]);
                         var priceRange = prices.slice(first, last + 1);
-                        //alert("Symbol "+ symbol+ "Unit "+ unitvalue + "Quantity "+ quantity + "Num "+portfolio);
                         var rgb = "rgb(" + parseInt(255/symbols.length) * i + ", " + parseInt(255/symbols.length) * (symbols.length - i) + ", " + parseInt(255/symbols.length) * i + ")";
-                        //alert("RGB "+rgb);
                         var dataset = {
                             label: symbol,
                             backgroundColor: rgb,
@@ -299,19 +268,12 @@ class Performance extends React.Component {
                         };
                         self.datasets.push(dataset);
                         if (self.datasets.length === symbols.length) {
-                            //alert("DATASETS "+self.datasets.length);
-                            /*if (0 === self.datasets.length) {
-                                alert("The service is not responding");
-                                return;
-                            }*/
                             Performance.show(dateRange, self.datasets, numOfPort);
                         }
                     }
                 };
             }(client, symbol, i));
-            //alert("PRE ");
             client.send();
-            //for(var j=0; j<1000;j++);
         }
     }
     static show(dateRange, datasets, numOfPort) {
@@ -357,18 +319,21 @@ class Performance extends React.Component {
     }
 
     render() {
-        //alert("Port "+this.props.portfolio);
         var num = this.props.num;
         var today = Performance.formatDate(new Date());
         var startDate = new Date();
-        startDate.setMonth(startDate.getMonth()-1);
+        startDate.setMonth(startDate.getMonth() - 1);
         startDate = Performance.formatDate(startDate);
+        var buttonStyle = {};
+        if (this.props.disabled) {
+            buttonStyle = {cursor: 'none', opacity: 0.3};
+        }
         return (
-            <div>
-                <button type="button" className="open-button" data-toggle="modal" data-target={"#myLargeModal"+num} onClick={this.perf}>Perf data</button>
+            <div className={this.props.class}>
+                <button type="button" style={buttonStyle} className="open-button perf" disabled={this.props.disabled} data-toggle="modal" data-target={"#myLargeModal"+num} onClick={this.perf}>Perf data</button>
 
-                <div className="modal fade bd-example-modal-lg" id={"myLargeModal"+num} tabIndex="-1" role="dialog" aria-labelledby={"myLargeModalLabel"+num} aria-hidden="true">
-                    <div className="modal-dialog modal-dialog-centered modal-lg">
+                <div className="modal fade bd-example-modal-xl" id={"myLargeModal"+num} tabIndex="-1" role="dialog" aria-labelledby={"myLargeModalLabel"+num} aria-hidden="true">
+                    <div className="modal-dialog modal-dialog-centered modal-xl">
                         <div className="modal-content">
                             <div className="modal-header">
                                 <h5 className="modal-title" id={"myLargeModalLabel"+num}></h5>
@@ -434,8 +399,25 @@ class Portfolio extends React.Component {
     checked(e) {
         var id = e.target.id.substring(1);
         this.state.selectedStocks[id] = e.target.checked;
+        for(var j=0; j<this.state.list.length && !this.state.selectedStocks[j]; j++ );
+        if(j < this.state.list.length) {
+            this._remove.disabled = false;
+            this._remove.style.cursor = 'pointer';
+            this._remove.style.opacity = '0.8';
+            var self=this;
+            $(this._remove).hover(function(){self._remove.style.opacity = '1';}, function(){self._remove.style.opacity = '0.8';});
+        } else {
+            this._remove.disabled = true;
+            this._remove.style.cursor = 'none';
+            this._remove.style.opacity = '0.3';
+            $(this._remove).hover(function(){});
+        }
     }
     removeSelected(e) {
+        this._remove.disabled = true;
+        this._remove.style.cursor = 'none';
+        this._remove.style.opacity = '0.3';
+        $(this._remove).hover(function(){});
         var key = this.props.portfolio;
         var newlist=[];
         for(var i=0; i<this.state.list.length; i++) {
@@ -471,7 +453,7 @@ class Portfolio extends React.Component {
                 this.rate = sessionStorage.getItem("rate"); // retrieves the list (string) from the local storage and parses it into Javascript array
             }
         } else {
-            document.getElementById("history").innerHTML = "Sorry, your browser does not support web storage...";
+            document.getElementById("container").innerHTML = "Sorry, your browser does not support web storage...";
         }
     }
 
@@ -493,18 +475,9 @@ class Portfolio extends React.Component {
         this.showPort();
     }
     componentDidMount() {
-        this._euro.checked=true;
-        //$('#table'+this.props.num).scrollTableBody({rowsToDisplay:5});
-        $('#table'+this.props.num).DataTable({
-            scrollY: 255,
-            scrollX: 2000,
-            scrollCollapse: true,
-            paging: false,
-            searching: false,
-            ordering: false,
-            info: false
-        });
+        this._euro.checked = true;
     }
+
     render() {
         var tdc={colSpan: 5};
         var self=this;
@@ -515,7 +488,7 @@ class Portfolio extends React.Component {
         if(this.state.rate === 1) {
             currency = '\u20AC';
         } else {
-            currency = '\u0024';
+            currency = '$';//\u0024';
         }
         for (var ii = 0; ii < this.state.list.length; ii++) {
             var symbol = this.state.list[ii]["symbol"];
@@ -536,26 +509,29 @@ class Portfolio extends React.Component {
             stocks.push(stock);
         }
         totalvalue = parseFloat(totalvalue.toString()).toFixed(2);
+        var disabled = this.state.list.length === 0;
+        var disabledAddingStocks = this.state.list.length === 50;
+
         return (
-            <div className="col-sm-6 col-md-4 col-0-gutter portfolio">
+            <div className={"col portfolio rel"}>
                 <div className="row">
-                    <div className="col-4">
+                    <div className="col-12 col-sm-4 title">
                         <p>{this.props.portfolio}</p>
                     </div>
-                    <div className="col-7">
+                    <div className="col col-sm-7">
                         <p>
-                            Show in &euro;&nbsp;<input type="radio" name={this.props.portfolio} ref={function(e4){self._euro = e4;}}  onChange={this.rateClick} />&ensp;
-                            Show in $&nbsp;<input type="radio" name={this.props.portfolio} ref={function(e5){self._checked = e5;}} onChange={this.rateClick} />
+                            Show in &euro;&nbsp;<input type="radio" disabled={disabled} name={this.props.portfolio} ref={function(e4){self._euro = e4;}}  onChange={this.rateClick} />&ensp;
+                            Show in $&nbsp;<input type="radio" disabled={disabled} name={this.props.portfolio} ref={function(e5){self._checked = e5;}} onChange={this.rateClick} />
                         </p>
                     </div>
-                    <div className="col-1 px-md-1">
+                    <div className="col-1 px-1">
                         <p><button id={this.props.num} type="submit" className="button" onClick={this.props.removePort} key={(this.count++).toString()}>x</button></p>
                     </div>
                 </div>
-                <div className="row">
+                <div className="row horizscroll">
                     <div className="col-12">
                         <table className="portfoliotable" id={"table"+this.props.num}>
-                            <thead>
+                            <thead id={"thead"+this.props.num}>
                             <tr>
                                 <th onClick={() => this.sortBy("symbol")}>Name</th>
                                 <th onClick={() => this.sortBy("unitvalue")}>Unit value</th>
@@ -564,24 +540,23 @@ class Portfolio extends React.Component {
                                 <th>Select</th>
                             </tr>
                             </thead>
-                            <tbody ref={function(e7){self["_table"] = e7;}} >
-                            {stocks}
+                            <tbody id={"thead"+this.props.num} ref={function(e7){self["_table"] = e7;}}>
+                                {stocks}
                             </tbody>
                         </table>
                     </div>
                 </div>
-                <div className="row">
-                    <div className="col-12">
+                <div className="row py-1">
+                    <div className="col-12 title">
                         <p>Total value of {this.props.portfolio}: {totalvalue+currency}</p>
                     </div>
                 </div>
-                <div className="row rel">
-                    <StockPopupForm num={this.props.num} portfolio={this.props.portfolio} class="col-33" open_button_class="open-button stock"/>
-                    <div className="col-33">
-                        <Performance num={this.props.num} portfolio={this.props.portfolio} symbols={symbols}/>
-                    </div>
-                    <div className="col-33">
-                        <button className="open-button" onClick={this.removeSelected}>Remove selected</button>
+                <div className="row"><br/><br/></div>
+                <div className="row down">
+                    <StockPopupForm num={this.props.num} portfolio={this.props.portfolio} disabled={disabledAddingStocks} class="col-6 col-md"/>
+                    <Performance num={this.props.num} portfolio={this.props.portfolio} symbols={symbols} class="col-6 col-md" disabled={disabled}/>
+                    <div className="col-6 col-md">
+                        <button className="open-button-remove downbut3" ref={function(e6){self._remove = e6;}} onClick={this.removeSelected}>Remove selected</button>
                     </div>
                 </div>
             </div>
@@ -675,10 +650,11 @@ class SPMS extends React.Component {
                 portfolios.push(<div className="row" key={ii}><Portfolio num={ii} portfolio={this.list[ii]} rate={this.rate} removePort={this.removePortfolio} key={ii}/></div>);
             }
         }
+        var disabledAddingPortfolios = this.list.length === 10;
         return(
             <div>
                 <div className="row abs">
-                    <PortfolioPopupForm class="col-12 py-3"  open_button_class="open-button port"/>
+                    <PortfolioPopupForm disabled={disabledAddingPortfolios} class="col-12 py-3"/>
                 </div>
                 <div>{portfolios}</div>
             </div>
